@@ -2,17 +2,18 @@ const fs = require("fs");
 const readline = require("readline");
 const { google } = require("googleapis");
 const config = require("./config.json");
+const cliProgress = require("cli-progress");
 
 // If modifying these scopes, delete token.json.
 const SCOPES = [
-    'https://www.googleapis.com/auth/drive',
-    'https://www.googleapis.com/auth/drive.appdata',
-    'https://www.googleapis.com/auth/drive.file',
-    'https://www.googleapis.com/auth/drive.metadata',
-    'https://www.googleapis.com/auth/drive.metadata.readonly',
-    'https://www.googleapis.com/auth/drive.photos.readonly',
-    'https://www.googleapis.com/auth/drive.readonly',
-  ];
+  "https://www.googleapis.com/auth/drive",
+  "https://www.googleapis.com/auth/drive.appdata",
+  "https://www.googleapis.com/auth/drive.file",
+  "https://www.googleapis.com/auth/drive.metadata",
+  "https://www.googleapis.com/auth/drive.metadata.readonly",
+  "https://www.googleapis.com/auth/drive.photos.readonly",
+  "https://www.googleapis.com/auth/drive.readonly",
+];
 // The file token.json stores the user's access and refresh tokens, and is
 // created automatically when the authorization flow completes for the first
 // time.
@@ -89,14 +90,14 @@ function listFiles(auth) {
     },
     (err, res) => {
       if (err) return console.log("The API returned an error: " + err);
-      const files = res.data.files.filter(f => f.size > config.minFileSize);
+      const files = res.data.files.filter((f) => f.size > config.minFileSize);
       if (files.length) {
         downloadFile(files[0].id, files[0].name, files[0].size, drive, auth);
       } else {
         console.log(`No files found - Searching again in ${config.delayMins} minutes`);
         setTimeout(() => {
-            listFiles(auth)
-        }, config.delayMins * 60 * 1000)
+          listFiles(auth);
+        }, config.delayMins * 60 * 1000);
       }
     }
   );
@@ -104,52 +105,61 @@ function listFiles(auth) {
 
 function downloadFile(fileId, fileName, size, drive, auth) {
   const filePath = `${config.outputDir}/${fileName}`;
+  console.log(`writing to ${filePath}`);
   const dest = fs.createWriteStream(filePath);
   let progress = 0;
-  let percentage = 0.00;
+  const bar1 = new cliProgress.SingleBar(
+    {
+      format: "CLI Progress | ({bar}) | {percentage}% || {value}/{total}GB Chunks",
+      barCompleteChar: "\u2588",
+      barIncompleteChar: "\u2591",
+      hideCursor: true,
+    },
+    cliProgress.Presets.shades_grey
+  );
+  bar1.start(parseFloat(size / 1073741824).toFixed(config.downloadDecimalPlaces), 0);
   return drive.files
-    .get({fileId, alt: 'media'}, {responseType: 'stream'})
-    .then(res => {
+    .get({ fileId, alt: "media" }, { responseType: "stream" })
+    .then((res) => {
       return new Promise((resolve, reject) => {
-        console.log(`writing to ${filePath}`);
         res.data
-          .on('end', () => {
-            console.log('Done downloading ' + fileName);
-            deleteFile(fileId, fileName, drive, auth)
+          .on("end", () => {
+            bar1.stop();
+            console.log("Done downloading " + fileName);
+            deleteFile(fileId, fileName, drive, auth);
             resolve(filePath);
           })
-          .on('error', err => {
-            console.error('Error downloading '  + fileName);
+          .on("error", (err) => {
+            console.error("Error downloading " + fileName);
             reject(err);
           })
-          .on('data', d => {
+          .on("data", (d) => {
             progress += d.length;
-            if (process.stdout.isTTY && percentage != parseFloat(progress / size * 100).toFixed(config.downloadDecimalPlaces)) {
-                percentage = parseFloat(progress / size * 100).toFixed(config.downloadDecimalPlaces);
-              process.stdout.clearLine();
-              process.stdout.cursorTo(0);
-              process.stdout.write(`Downloaded ${percentage}%`);
+            if (process.stdout.isTTY) {
+              bar1.update(parseFloat(progress / 1073741824).toFixed(config.downloadDecimalPlaces));
             }
           })
           .pipe(dest);
-      })
-      .catch(err => {
-          console.log(err);
-          listFiles(auth);
-      })
-    }).catch(err => {
+      }).catch((err) => {
         console.log(err);
         listFiles(auth);
+      });
     })
+    .catch((err) => {
+      console.log(err);
+      listFiles(auth);
+    });
 }
 
 function deleteFile(fileId, fileName, drive, auth) {
-    drive.files.delete({fileId})
+  drive.files
+    .delete({ fileId })
     .then(() => {
-        console.log("Downloaded - " + fileName);
-        listFiles(auth);
-    }).catch((err) => {
-        console.log(err);
-        listFiles(auth);
+      console.log("Downloaded - " + fileName);
+      listFiles(auth);
     })
+    .catch((err) => {
+      console.log(err);
+      listFiles(auth);
+    });
 }
