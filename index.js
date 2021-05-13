@@ -110,7 +110,7 @@ function downloadFile(fileId, fileName, size, drive, auth) {
   let progress = 0;
   const bar1 = new cliProgress.SingleBar(
     {
-      format: "CLI Progress | ({bar}) | {percentage}% || {value}/{total}GB Chunks",
+      format: "CLI Progress | ({bar}) | {percentage}% || {value}/{total}GB",
       barCompleteChar: "\u2588",
       barIncompleteChar: "\u2591",
       hideCursor: true,
