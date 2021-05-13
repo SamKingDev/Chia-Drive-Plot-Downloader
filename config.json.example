@@ -1,0 +1,6 @@
+{
+    "folderId": "FolderIdHere",
+    "outputDir": "D:\\",
+    "delayMins": 60,
+    "minFileSize": 1000
+}
