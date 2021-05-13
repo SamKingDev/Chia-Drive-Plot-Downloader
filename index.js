@@ -111,8 +111,6 @@ function downloadFile(fileId, fileName, size, drive, auth) {
   const bar1 = new cliProgress.SingleBar(
     {
       format: "CLI Progress | ({bar}) | {percentage}% || {value}/{total}GB",
-      barCompleteChar: "\u2588",
-      barIncompleteChar: "\u2591",
       hideCursor: true,
     },
     cliProgress.Presets.shades_grey
@@ -136,7 +134,7 @@ function downloadFile(fileId, fileName, size, drive, auth) {
           .on("data", (d) => {
             progress += d.length;
             if (process.stdout.isTTY) {
-              bar1.update(parseFloat(progress / 1073741824).toFixed(config.downloadDecimalPlaces));
+                bar1.update(parseFloat(parseFloat(progress / 1073741824).toFixed(config.downloadDecimalPlaces)));
             }
           })
           .pipe(dest);
