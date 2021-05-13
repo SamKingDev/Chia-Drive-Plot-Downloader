@@ -91,7 +91,7 @@ function listFiles(auth) {
       if (err) return console.log("The API returned an error: " + err);
       const files = res.data.files.filter(f => f.size > config.minFileSize);
       if (files.length) {
-        downloadFile(files[0].id, files[0].name, drive, auth);
+        downloadFile(files[0].id, files[0].name, files[0].size, drive, auth);
       } else {
         console.log(`No files found - Searching again in ${config.delayMins} minutes`);
         setTimeout(() => {
@@ -102,10 +102,11 @@ function listFiles(auth) {
   );
 }
 
-function downloadFile(fileId, fileName, drive, auth) {
+function downloadFile(fileId, fileName, size, drive, auth) {
   const filePath = `${config.outputDir}/${fileName}`;
   const dest = fs.createWriteStream(filePath);
   let progress = 0;
+  let percentage = 0.00;
   return drive.files
     .get({fileId, alt: 'media'}, {responseType: 'stream'})
     .then(res => {
@@ -123,10 +124,11 @@ function downloadFile(fileId, fileName, drive, auth) {
           })
           .on('data', d => {
             progress += d.length;
-            if (process.stdout.isTTY) {
+            if (process.stdout.isTTY && percentage != parseFloat(progress / size * 100).toFixed(config.downloadDecimalPlaces)) {
+                percentage = parseFloat(progress / size * 100).toFixed(config.downloadDecimalPlaces);
               process.stdout.clearLine();
               process.stdout.cursorTo(0);
-              process.stdout.write(`Downloaded ${progress} bytes`);
+              process.stdout.write(`Downloaded ${percentage}%`);
             }
           })
           .pipe(dest);

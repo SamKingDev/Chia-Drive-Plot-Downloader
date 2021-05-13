@@ -2,5 +2,6 @@
     "folderId": "FolderIdHere",
     "outputDir": "D:\\",
     "delayMins": 60,
-    "minFileSize": 1000
+    "minFileSize": 1000,
+    "downloadDecimalPlaces": 2
 }
